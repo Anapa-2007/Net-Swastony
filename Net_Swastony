@@ -1,0 +1,50 @@
+from ultralytics import YOLO
+import cv2
+from mss import mss
+from helper import capture_screen
+
+# Определите некоторые константы
+CONFIDENCE_THRESHOLD = 0.8
+
+# Загрузите предварительно обученную модель YOLOv8n
+model = YOLO(r"C:\Users\cyka2\PycharmProjects\pythonProject1\runs\detect\train24\weights\best.pt")
+
+# Инициализируйте объект захвата экрана
+sct = mss()
+mon = {'top': 0, 'left': 0, 'width': 1920, 'height': 1080}  # Задайте размеры захвата экрана
+
+while True:
+
+    # Захват экрана
+    frame = capture_screen(sct, mon)
+
+    # Изменение размера кадра с сохранением пропорций
+    frame = cv2.resize(frame, (1920//2, 1080//2), interpolation=cv2.INTER_AREA)
+
+    # Запуск модели YOLO на кадре
+    detections = model(frame)[0]
+
+    # Цикл по обнаружениям
+    for data in detections.boxes.data.tolist():
+        # Извлечь уверенность (вероятность), связанную с обнаружением
+        confidence = data[4]
+
+        # Отфильтровать слабые обнаружения, убедившись, что уверенность выше минимального порога
+        if float(confidence) < CONFIDENCE_THRESHOLD:
+            continue
+
+        # Если уверенность выше минимального порога, заблюрьте область внутри ограничивающей рамки
+        xmin, ymin, xmax, ymax = int(data[0]), int(data[1]), int(data[2]), int(data[3])
+        roi = frame[ymin:ymax, xmin:xmax]  # Выделение области интереса (ROI)
+        blurred_roi = cv2.GaussianBlur(roi, (51, 51), 0)  # Применение размытия к ROI
+        frame[ymin:ymax, xmin:xmax] = blurred_roi  # Замена оригинальной ROI размытой
+
+        # Нарисуйте ограничивающую рамку на кадре
+        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+
+    # Показать кадр на экране
+    cv2.imshow("Frame", frame)
+    if cv2.waitKey(1) == ord("B"):
+        break
+
+cv2.destroyAllWindows()
