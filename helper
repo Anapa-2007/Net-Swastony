@@ -1,0 +1,16 @@
+import cv2
+import numpy as np
+from PIL import Image
+
+
+def capture_screen(sct, mon):
+    """
+    Функция захвата экрана.
+    :param sct: объект mss для захвата экрана
+    :param mon: словарь с параметрами захвата экрана
+    :return: кадр в формате BGR
+    """
+    screenShot = sct.grab(mon)
+    frame = np.array(Image.frombytes('RGB', (screenShot.width, screenShot.height), screenShot.rgb))
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    return frame
